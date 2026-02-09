@@ -18,6 +18,10 @@ inputs:
     description: 'Show verbose output'
     required: false
     default: 'false'
+  version:
+    description: 'isnad-scan version to install (default: latest)'
+    required: false
+    default: ''
 
 outputs:
   trust-level:
@@ -37,7 +41,13 @@ runs:
     
     - name: Install isnad-scan
       shell: bash
-      run: pip install isnad-scan
+      run: |
+        VERSION="${{ inputs.version }}"
+        if [ -n "$VERSION" ]; then
+          pip install "isnad-scan==$VERSION"
+        else
+          pip install isnad-scan
+        fi
     
     - name: Run scan
       id: scan
@@ -50,7 +60,8 @@ runs:
           VERBOSE_FLAG="-v"
         fi
         
-        OUTPUT=$(isnad-scan "${{ inputs.path }}" $VERBOSE_FLAG 2>&1)
+        SCAN_PATH="${{ inputs.path }}"
+        OUTPUT=$(isnad-scan "$SCAN_PATH" $VERBOSE_FLAG 2>&1)
         EXIT_CODE=$?
         
         echo "$OUTPUT"

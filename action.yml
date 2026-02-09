@@ -1,0 +1,91 @@
+name: 'ISNAD Scan'
+description: 'Security scanner for AI agent skills - detect dangerous patterns before they reach production'
+author: 'ISNAD Protocol'
+branding:
+  icon: 'shield'
+  color: 'green'
+
+inputs:
+  path:
+    description: 'Path to scan (default: current directory)'
+    required: false
+    default: '.'
+  fail-on:
+    description: 'Fail the check on this trust level or worse (WARN, DANGER, or never)'
+    required: false
+    default: 'DANGER'
+  verbose:
+    description: 'Show verbose output'
+    required: false
+    default: 'false'
+
+outputs:
+  trust-level:
+    description: 'Trust level result (SAFE, WARN, DANGER)'
+  findings-count:
+    description: 'Number of findings'
+  report:
+    description: 'Full scan report'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install isnad-scan
+      shell: bash
+      run: pip install isnad-scan
+    
+    - name: Run scan
+      id: scan
+      shell: bash
+      run: |
+        set +e
+        
+        VERBOSE_FLAG=""
+        if [ "${{ inputs.verbose }}" = "true" ]; then
+          VERBOSE_FLAG="-v"
+        fi
+        
+        OUTPUT=$(isnad-scan "${{ inputs.path }}" $VERBOSE_FLAG 2>&1)
+        EXIT_CODE=$?
+        
+        echo "$OUTPUT"
+        
+        # Parse trust level
+        if echo "$OUTPUT" | grep -q "DANGER"; then
+          TRUST_LEVEL="DANGER"
+        elif echo "$OUTPUT" | grep -q "WARN"; then
+          TRUST_LEVEL="WARN"
+        else
+          TRUST_LEVEL="SAFE"
+        fi
+        
+        # Count findings
+        FINDINGS=$(echo "$OUTPUT" | grep -c "^\[" || echo "0")
+        
+        echo "trust-level=$TRUST_LEVEL" >> $GITHUB_OUTPUT
+        echo "findings-count=$FINDINGS" >> $GITHUB_OUTPUT
+        
+        # Save report for output
+        echo "report<<EOF" >> $GITHUB_OUTPUT
+        echo "$OUTPUT" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+        
+        # Determine if we should fail
+        FAIL_ON="${{ inputs.fail-on }}"
+        SHOULD_FAIL=0
+        
+        if [ "$FAIL_ON" = "WARN" ] && [ "$TRUST_LEVEL" != "SAFE" ]; then
+          SHOULD_FAIL=1
+        elif [ "$FAIL_ON" = "DANGER" ] && [ "$TRUST_LEVEL" = "DANGER" ]; then
+          SHOULD_FAIL=1
+        fi
+        
+        if [ $SHOULD_FAIL -eq 1 ]; then
+          echo "::error::ISNAD Scan failed with trust level: $TRUST_LEVEL"
+          exit 1
+        fi

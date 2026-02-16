@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: isnad-protocol/isnad-scan-action@v1
+      - uses: counterspec/isnad-scan-action@v1
         with:
           path: './skills'
           fail-on: 'DANGER'
@@ -48,7 +48,7 @@ jobs:
 ## Example: Comment on PR
 
 ```yaml
-- uses: isnad-protocol/isnad-scan-action@v1
+- uses: counterspec/isnad-scan-action@v1
   id: scan
   with:
     path: './skills'
@@ -82,7 +82,7 @@ jobs:
 
 - [ISNAD Protocol](https://isnad.md)
 - [isnad-scan on PyPI](https://pypi.org/project/isnad-scan/)
-- [Report Issues](https://github.com/isnad-protocol/isnad-scan-action/issues)
+- [Report Issues](https://github.com/counterspec/isnad-scan-action/issues)
 
 ---
 
